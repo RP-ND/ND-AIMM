@@ -2,6 +2,7 @@ from queue import Queue, Empty
 from navigation import *
 from relays import set_relay_state
 import time
+from processing import process_result
 
 def results_consumer(results_queue, stop_event):
     key_tracker = 0
@@ -46,7 +47,8 @@ def results_consumer(results_queue, stop_event):
         try:
             result = results_queue.get(timeout=0.1)
             print(result)
-            # process_result(result) # Process each result to track and adjust based on buoys
+            
+            multiplier1, multiplier2 = process_result(result) # Process each result to track and adjust based on buoys
         except Empty:
             pass
 
@@ -67,9 +69,10 @@ def results_consumer(results_queue, stop_event):
                     turn_direction = navigate_to_target(current_lat, current_lon, target_lat, target_lon, 50, 50)
 
                 # Pass the turn direction to control motors
-                control_motors(50, 50, turn_direction)
+                control_motors(50, 50, turn_direction, multiplier1, multiplier2)
             else:
-                print("GPS data not available. Skipping navigation.")
+                pass
+                #print("GPS data not available. Skipping navigation.")
         except Exception as e:
             print(f"An error occurred during navigation: {e}")
 
@@ -81,7 +84,4 @@ def results_consumer(results_queue, stop_event):
         print(f"Loop {loop_count} execution time: {loop_time:.4f} seconds")
 
         # Add a short sleep to prevent this loop from consuming too much CPU
-        time.sleep(1)
-
-    average_time = total_time / loop_count
-    print(f"Average loop execution time: {average_time:.4f} seconds")
+        #time.sleep(0.05)

@@ -23,8 +23,8 @@ def read_gps_data_ublox():
                 accHeading = veh.accHeading
                 return latitude, longitude, heading, accHeading
             except Exception as e:
-                print(f"An error occurred while reading GPS data: {e}")
+                #print(f"An error occurred while reading GPS data: {e}")
                 return None, None, None, None
     except serial.SerialException as e:
-        print(f"An error occurred while opening the serial port: {e}")
+        #print(f"An error occurred while opening the serial port: {e}")
         return None, None, None, None
