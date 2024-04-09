@@ -53,6 +53,9 @@ def main():
 
     model_paths = ['/home/ndaimm/ndaimm/ND-AIMM/models/n/custom1.pt', '/home/ndaimm/ndaimm/ND-AIMM/models/n/custom2.pt']
     threads = []
+    
+    consumer_thread = threading.Thread(target=results_consumer, args=(results_queue, stop_event))
+    consumer_thread.start()
 
     for i, deviceInfo in enumerate(deviceInfos):
         model_path = model_paths[i % len(model_paths)]
@@ -60,9 +63,6 @@ def main():
         t = threading.Thread(target=processCamera, args=(deviceInfo, model_path, results_queue))
         t.start()
         threads.append(t)
-        
-    consumer_thread = threading.Thread(target=results_consumer, args=(results_queue, stop_event))
-    consumer_thread.start()
 
     for t in threads:
         t.join()  # Ensure all threads have finished before exiting

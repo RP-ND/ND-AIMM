@@ -12,7 +12,7 @@ from calc import HostSpatialsCalc
 from math import radians, sin, cos, sqrt, atan2, degrees
 from engine import control_motors
 from gps import read_gps_data_ublox
-from heading import BNO085Heading
+from heading import get_heading
 
 
 ########################
@@ -46,6 +46,8 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
     # Distance in meters
     distance = c * r * 1000
+    
+    print(distance)
 
     return distance
 
@@ -72,58 +74,67 @@ def calculate_bearing(current_lat, current_lon, target_lat, target_lon):
 
     return bearing
 
+def normalize_heading(heading):
+    """
+    Normalizes the heading to the range 0 to 360 degrees.
+    """
+    if heading < 0:
+        heading += 360
+    return heading
+
 def determine_turn_direction(current_heading, target_bearing):
     """
     Determines whether to turn left or right based on the current heading and target bearing, considering the shortest path.
-
     :returns: 'left', 'right', or 'forward'
     """
+    # Normalize the current heading and target bearing to the range 0 to 360
+    current_heading = normalize_heading(current_heading)
+    target_bearing = normalize_heading(target_bearing)
+
     # Calculate the difference between the current heading and the target bearing
     diff = target_bearing - current_heading
 
-    # Normalize the difference to the range 0 to 360
-    diff = diff % 360
+    # Normalize the difference to the range -180 to 180
+    if diff > 180:
+        diff -= 360
+    elif diff < -180:
+        diff += 360
 
     # Determine the turn direction based on the shortest path
-    if abs(diff) < 10 or abs(diff) > 350:  # If the difference is small, go forward
+    if abs(diff) < 10:  # If the difference is small, go forward
         return 'forward'
-    elif diff > 180:
-        return 'left'
-    else:
+    elif diff > 0:
         return 'right'
+    else:
+        return 'left'
     
 ########################
 # Movement Call Block
 ######################## 
 
-def navigate_to_target(target_lat, target_lon, pwm1, pwm2):
-    
-    bno085_heading = BNO085Heading()
-     
+def navigate_to_target(current_lat, current_lon, target_lat, target_lon, pwm1, pwm2):
     """
     Navigates from the current location to the target location by polling the current GPS coordinates
     and heading, and adjusting the heading accordingly.
-
     :param target_lat: Target latitude
     :param target_lon: Target longitude
     :returns: Navigation instruction ('left', 'right', or 'forward')
     """
-    current_lat, current_lon = read_gps_data_ublox()  # Poll the current GPS coordinates
     
-    current_head = BNO085Heading.read_heading()
+    current_head = get_heading()
     print(f"Current Heading: {current_head}")
-    
+
     # Calculate the distance to the target
     distance_to_target = haversine_distance(current_lat, current_lon, target_lat, target_lon)
-
+    
     # Check if within 5-10ft (1.5-3 meters approximately) of the target
-    if distance_to_target <= 3:
+    if distance_to_target <= 5:
         control_motors(pwm1, pwm2, 'stop')
         return None  # Signal to move to the next coordinate
 
     # Calculate the bearing to the target
     target_bearing = calculate_bearing(current_lat, current_lon, target_lat, target_lon)
-
+    
     # Determine the turn direction
     turn_direction = determine_turn_direction(current_head, target_bearing)
 

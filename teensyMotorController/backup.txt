@@ -1,0 +1,161 @@
+#include <Arduino.h>
+#include <PulsePosition.h>
+
+#define PPM_PIN 2
+#define NUM_CHANNELS 4
+
+#define PWM1_PIN 10
+#define DIR1_PIN 12
+#define PWM2_PIN 11
+#define DIR2_PIN 13
+
+#define FAILSAFE_TIMEOUT 1000 // Failsafe timeout in milliseconds
+
+PulsePositionInput ppm(PPM_PIN);
+
+unsigned long lastReceivedTime = 0;
+bool failsafeActive = false;
+bool automaticMode = false;
+
+void setup()
+{
+  pinMode(PWM1_PIN, OUTPUT);
+  pinMode(DIR1_PIN, OUTPUT);
+  pinMode(PWM2_PIN, OUTPUT);
+  pinMode(DIR2_PIN, OUTPUT);
+
+  // Ensure motor is stopped initially
+  digitalWrite(DIR1_PIN, LOW);
+  digitalWrite(DIR2_PIN, LOW);
+  analogWrite(PWM1_PIN, 0);
+  analogWrite(PWM2_PIN, 0);
+
+  // Initialize serial communication
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  if (ppm.available())
+  {
+    lastReceivedTime = millis(); // Update the last received time
+
+    int throttle = ppm.read(1); // Read channel 1 value (throttle)
+    int steering = ppm.read(2); // Read channel 2 value (steering)
+
+    if (throttle < 1000 || throttle > 2000 || steering < 1000 || steering > 2000)
+    {
+      // Channel values are outside the valid range, trigger failsafe
+      failsafeActive = true;
+    }
+    else
+    {
+      failsafeActive = false;
+      automaticMode = (throttle < 1100); // Check if throttle is in the automatic mode range
+
+      if (automaticMode)
+      {
+        // Automatic mode
+        if (Serial.available())
+        {
+          String command = Serial.readStringUntil('\n');
+          command.trim();
+          int commaIndex1 = command.indexOf(',');
+          int commaIndex2 = command.indexOf(',', commaIndex1 + 1);
+          if (commaIndex1 != -1 && commaIndex2 != -1)
+          {
+            String directionStr = command.substring(0, commaIndex1);
+            String pwm1Str = command.substring(commaIndex1 + 1, commaIndex2);
+            String pwm2Str = command.substring(commaIndex2 + 1);
+            int pwm1Speed = pwm1Str.toInt();
+            int pwm2Speed = pwm2Str.toInt();
+
+            if (directionStr == "forward")
+            {
+              digitalWrite(DIR1_PIN, HIGH);
+              digitalWrite(DIR2_PIN, HIGH);
+              analogWrite(PWM1_PIN, pwm1Speed);
+              analogWrite(PWM2_PIN, pwm2Speed);
+            }
+            else if (directionStr == "left")
+            {
+              digitalWrite(DIR1_PIN, LOW);
+              digitalWrite(DIR2_PIN, HIGH);
+              analogWrite(PWM1_PIN, pwm1Speed);
+              analogWrite(PWM2_PIN, pwm2Speed);
+            }
+            else if (directionStr == "right")
+            {
+              digitalWrite(DIR1_PIN, HIGH);
+              digitalWrite(DIR2_PIN, LOW);
+              analogWrite(PWM1_PIN, pwm1Speed);
+              analogWrite(PWM2_PIN, pwm2Speed);
+            }
+            else if (directionStr == "brake")
+            {
+              // Reverse the motors for 3 seconds
+              digitalWrite(DIR1_PIN, LOW);
+              digitalWrite(DIR2_PIN, LOW);
+              analogWrite(PWM1_PIN, pwm1Speed);
+              analogWrite(PWM2_PIN, pwm2Speed);
+              delay(3000);
+              digitalWrite(DIR1_PIN, LOW);
+              digitalWrite(DIR2_PIN, LOW);
+              analogWrite(PWM1_PIN, 0);
+              analogWrite(PWM2_PIN, 0);
+            }
+            else if (directionStr == "stop")
+            {
+              digitalWrite(DIR1_PIN, LOW);
+              digitalWrite(DIR2_PIN, LOW);
+              analogWrite(PWM1_PIN, 0);
+              analogWrite(PWM2_PIN, 0);
+            }
+          }
+        }
+      }
+      else
+      {
+        // Manual mode (PWM control)
+        int pwm1 = map(throttle, 1100, 2000, 0, 255);
+        int pwm2 = map(throttle, 1100, 2000, 0, 255);
+
+        // Adjust PWM values based on steering
+        if (steering < 1500)
+        {
+          pwm1 = map(steering, 1000, 1500, 0, pwm1);
+        }
+        else if (steering > 1500)
+        {
+          pwm2 = map(steering, 1500, 2000, pwm2, 0);
+        }
+
+        // Determine direction based on throttle value
+        bool dir1 = (throttle > 1500);
+        bool dir2 = (throttle > 1500);
+
+        // Output PWM and direction signals
+        analogWrite(PWM1_PIN, pwm1);
+        analogWrite(PWM2_PIN, pwm2);
+        digitalWrite(DIR1_PIN, dir1);
+        digitalWrite(DIR2_PIN, dir2);
+      }
+    }
+  }
+
+  // Check for failsafe condition
+  if (millis() - lastReceivedTime > FAILSAFE_TIMEOUT)
+  {
+    failsafeActive = true;
+  }
+
+  // Execute failsafe actions if failsafe is active
+  if (failsafeActive)
+  {
+    // Stop the motors or perform any other failsafe actions
+    analogWrite(PWM1_PIN, 0);
+    analogWrite(PWM2_PIN, 0);
+    digitalWrite(DIR1_PIN, LOW);
+    digitalWrite(DIR2_PIN, LOW);
+  }
+}

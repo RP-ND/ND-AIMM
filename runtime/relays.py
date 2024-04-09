@@ -22,3 +22,6 @@ def set_relay_state(relay_number, state):
             print(f"Relay {relay_number} deactivated")
     except Exception as e:
         print(f"Error: {e}")
+        
+# Uncomment to turn off
+# set_relay_state(1, True)

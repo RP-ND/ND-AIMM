@@ -34,6 +34,11 @@ def results_consumer(results_queue, stop_event):
         'finish'
     ]
 
+    test_coordinates_dict = {
+        'boat1':  [-86.23914691994757,41.70632844980418], # middle of the lake
+        'drone_landing': [-86.23733805818709,41.70676156180065], # on the shoreline
+    }
+
     target_lon = target_coordinates_dict[target_key_list[key_tracker]][0]
     target_lat = target_coordinates_dict[target_key_list[key_tracker]][1]
 
@@ -45,10 +50,9 @@ def results_consumer(results_queue, stop_event):
 
         # Check for new results and process them if available
         try:
-            result = results_queue.get(timeout=0.1)
+            result = results_queue.get(timeout=0.01)
             print(result)
             
-            multiplier1, multiplier2 = process_result(result) # Process each result to track and adjust based on buoys
         except Empty:
             pass
 
@@ -56,7 +60,7 @@ def results_consumer(results_queue, stop_event):
         # Actual Control
         ###################
         try:
-            current_lat, current_lon, current_heading, current_accHeading = read_gps_data_ublox()
+            current_lat, current_lon = ((read_gps_data_ublox()))
 
             if current_lat is not None and current_lon is not None:
                 # Update navigation instructions based on the latest GPS and heading
@@ -69,7 +73,7 @@ def results_consumer(results_queue, stop_event):
                     turn_direction = navigate_to_target(current_lat, current_lon, target_lat, target_lon, 50, 50)
 
                 # Pass the turn direction to control motors
-                control_motors(50, 50, turn_direction, multiplier1, multiplier2)
+                control_motors(40, 40, turn_direction)
             else:
                 pass
                 #print("GPS data not available. Skipping navigation.")
@@ -84,4 +88,4 @@ def results_consumer(results_queue, stop_event):
         print(f"Loop {loop_count} execution time: {loop_time:.4f} seconds")
 
         # Add a short sleep to prevent this loop from consuming too much CPU
-        #time.sleep(0.05)
+        time.sleep(0.05)

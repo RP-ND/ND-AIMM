@@ -1,9 +1,9 @@
 import serial
 import time
 
-def control_motors(pwm1_speed, pwm2_speed, command, multiplier1, multiplier2):
+def control_motors(pwm1_speed, pwm2_speed, command):
     # Hardcoded serial port details
-    port = '/dev/ttyACM0'  # Serial port
+    port = '/dev/ttyACM1'  # Serial port
     baudrate = 9600  # Baud rate
     timeout = 5  # Timeout in seconds
 
@@ -11,14 +11,6 @@ def control_motors(pwm1_speed, pwm2_speed, command, multiplier1, multiplier2):
     try:
         ser = serial.Serial(port, baudrate, timeout=timeout)
         ser.flush()
-
-        # Ensure speeds are within a valid range, e.g., 0-255
-        pwm1_speed = max(0, min(255, pwm1_speed))
-        pwm2_speed = max(0, min(255, pwm2_speed))
-
-        # Apply multipliers to the speeds
-        pwm1_speed = int(pwm1_speed * multiplier1)
-        pwm2_speed = int(pwm2_speed * multiplier2)
 
         if command in ['forward', 'left', 'right', 'stop', 'brake']:
             # Construct the command string including direction, speeds, and multipliers
@@ -39,6 +31,4 @@ def control_motors(pwm1_speed, pwm2_speed, command, multiplier1, multiplier2):
             ser.close()
 
 # Example usage
-control_motors(200, 200, 'brake', 1, 1)
-time.sleep(10)
-control_motors(0, 0, 'stop', 1.0, 1.0)
+control_motors(10, 10, 'stop')

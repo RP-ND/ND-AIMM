@@ -1,0 +1,24 @@
+#include <Arduino.h>
+
+const int PWM1_PIN = 3; // PWM1 connected to pin 2
+
+void setup()
+{
+  // Configure PWM1 pin as an output
+  pinMode(PWM1_PIN, OUTPUT);
+
+  // Set the PWM resolution to 8 bits (0-255)
+  analogWriteResolution(8);
+
+  // Set the PWM frequency to the ideal frequency for 8-bit resolution
+  analogWriteFrequency(PWM1_PIN, 500); // For 600 MHz or 450 MHz CPU speed
+  // analogWriteFrequency(PWM1_PIN, 515625);  // For 528 MHz or 396 MHz CPU speed
+}
+
+void loop()
+{
+  // Set the PWM duty cycle to 50%
+  analogWrite(PWM1_PIN, 255);
+
+  // ...
+}

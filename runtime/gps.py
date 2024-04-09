@@ -2,7 +2,7 @@ import serial
 from ublox_gps import UbloxGps
 
 # Serial port configuration
-port = "/dev/ttyGSM1"  # Adjust this according to your GPS module's serial port
+port = "/dev/ttyACM0"  # Adjust this according to your GPS module's serial port
 baudrate = 115200
 
 # Function to read GPS data using ublox_gps
@@ -14,17 +14,10 @@ def read_gps_data_ublox():
                 geo = gps.geo_coords()
                 latitude = geo.lat
                 longitude = geo.lon
-                veh = gps.veh_attitude()
-                roll = veh.roll
-                pitch = veh.pitch
-                heading = veh.heading
-                accRoll = veh.accRoll
-                accPitch = veh.accPitch
-                accHeading = veh.accHeading
-                return latitude, longitude, heading, accHeading
+                return latitude, longitude
             except Exception as e:
                 #print(f"An error occurred while reading GPS data: {e}")
-                return None, None, None, None
+                return None, None
     except serial.SerialException as e:
         #print(f"An error occurred while opening the serial port: {e}")
-        return None, None, None, None
+        return None, None
